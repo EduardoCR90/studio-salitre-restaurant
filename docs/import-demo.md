@@ -22,7 +22,7 @@ El workflow **Audit demo import (read only)**:
 
 1. Obtiene el frontend actual de main y ejecuta el exportador existente `npm run seed:export`. Este comando solo genera un NDJSON local.
 2. Consulta documentos y assets de production con perspectiva raw. Con un token válido incluye borradores y versiones, además de publicados. Sin autenticación solo informa de una auditoría parcial y no marca el plan como importable.
-3. Detiene la futura importación si existe cualquier documento de contenido, aunque sea un borrador. Los assets existentes se pueden reutilizar por su hash; no se reescriben.
+3. Detiene la futura importación si existe cualquier documento de contenido, aunque sea un borrador. Los documentos internos de Sanity (`system.*` y `sanity.*`) se excluyen del inventario de contenido y nunca se modifican. Los assets existentes se pueden reutilizar por su hash; no se reescriben.
 4. Valida los datos del exportador, los slugs y relaciones y usa los validadores reales del schema de Studio para los 22 documentos candidatos. Las referencias a documentos/imagenes pendientes se validan dentro del plan en memoria: esto no significa que ya existan en Sanity.
 5. Descarga y comprueba las seis fotografías: HTTP, formato JPEG, dimensiones, tamaño y hashes. No las sube.
 6. Genera el artefacto `salitre-import-review`: SUMMARY.md, plan.json y un NDJSON de validación. No importes directamente ese NDJSON: contiene claves de origen y referencias de prevalidación, no los IDs finales.

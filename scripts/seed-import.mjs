@@ -29,7 +29,7 @@ try {
   const slots = imageSlots(mockContent);
   phase = 'inventory';
   const existing = await client.fetch(`{
-    "documents": *[!(_type match "sanity.*")] | order(_id asc){_id,_rev,_type},
+    "documents": *[!(_type match "sanity.*") && !(_type match "system.*")] | order(_id asc){_id,_rev,_type},
     "allDocumentTypes": array::unique(*[]._type),
     "assets": *[_type == "sanity.imageAsset"]{_id,sha1hash,url}
   }`);
@@ -99,7 +99,7 @@ try {
       }
     }
     // Comprobación nueva justo antes de crear los documentos.
-    const beforeWrite = await client.fetch('count(*[!(_type match "sanity.*")])');
+    const beforeWrite = await client.fetch('count(*[!(_type match "sanity.*") && !(_type match "system.*")])');
     assert.equal(beforeWrite,0,'Han aparecido documentos desde la auditoría; se cancela sin sobrescribir');
     const categories = new Map();
     for (const original of source.filter(x=>x._type==='category')) {
