@@ -11,13 +11,18 @@
     "check": "tsc --noEmit",
     "build": "sanity build dist --yes",
     "deploy": "sanity deploy --yes",
-    "schema:deploy": "sanity schemas deploy"
+    "schema:deploy": "sanity schemas deploy",
+    "seed:audit": "node --experimental-strip-types scripts/seed-import.mjs audit",
+    "seed:import": "node --experimental-strip-types scripts/seed-import.mjs import",
+    "test": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "sanity": "6.20.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "styled-components": "6.6.0"
+    "styled-components": "6.6.0",
+    "@sanity/client": "8.11.0",
+    "@sanity/validation": "6.20.0"
   },
   "devDependencies": {
     "typescript": "5.9.3",

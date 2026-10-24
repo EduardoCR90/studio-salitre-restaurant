@@ -47,3 +47,7 @@ El Studio local se abre en http://localhost:3333. `npm run schema:deploy` y `npm
 ## Modelo
 
 `schemaTypes/index.ts` registra `editorialImage`, `seo`, `settings`, `page`, `category`, `dish`, `story` y `gallery`. `sanity.config.ts` controla singletons y estructura; `sanity.cli.ts` define proyecto, dataset y hostname. Antes de modificar un campo, revisa su consulta GROQ y contrato Zod en el frontend.
+
+## Importar la demo existente
+
+Se prepara una importación inicial sin sobrescrituras mediante auditoría de solo lectura y confirmación expresa. Consulta [docs/import-demo.md](docs/import-demo.md). El workflow de auditoría muestra documentos existentes, compatibilidad, imágenes y huella del plan. El workflow de importación no se ejecuta automáticamente: requiere la frase de confirmación y la huella aprobada. No se ha importado contenido al añadir estos archivos.
