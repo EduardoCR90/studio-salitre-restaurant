@@ -1,0 +1,50 @@
+name: Import approved demo content
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Escribe CONFIRMAR IMPORTACION SALITRE solo después de revisar y aprobar el plan
+        required: true
+        type: string
+      plan_digest:
+        description: SHA-256 exacta del plan aprobado (Audit demo import)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: salitre-initial-content-import
+  cancel-in-progress: false
+jobs:
+  import:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'CONFIRMAR IMPORTACION SALITRE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: EduardoCR90/restaurant-premium-sanity
+          ref: main
+          path: frontend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.9.0 --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
+        working-directory: frontend
+      - run: npm run seed:export
+        working-directory: frontend
+      - run: npm run seed:import
+        env:
+          SANITY_IMPORT_TOKEN: ${{ secrets.SANITY_IMPORT_TOKEN || secrets.SANITY_AUTH_TOKEN }}
+          SANITY_SEED_CONFIRMATION: ${{ inputs.confirmation }}
+          SANITY_SEED_PLAN_DIGEST: ${{ inputs.plan_digest }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: salitre-import-result
+          path: import-review/
+          retention-days: 7
