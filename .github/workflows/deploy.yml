@@ -1,0 +1,37 @@
+name: Publish standalone Sanity Studio
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: salitre-studio-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
+      SANITY_STUDIO_PROJECT_ID: hfa8zkyw
+      SANITY_STUDIO_DATASET: production
+      SANITY_STUDIO_HOSTNAME: ${{ vars.SANITY_STUDIO_HOSTNAME || 'salitre-restaurant-hfa8zkyw' }}
+    steps:
+      - name: Require deploy credentials
+        run: |
+          if [ -z "$SANITY_AUTH_TOKEN" ]; then
+            echo '::error::Configura SANITY_AUTH_TOKEN como secreto de Actions en este repositorio.'
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.9.0 --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm run schema:deploy
+      - run: npm run deploy
+      - name: Verify hosted Studio
+        run: curl --fail --silent --show-error --max-time 30 "https://${SANITY_STUDIO_HOSTNAME}.sanity.studio/" > /dev/null
