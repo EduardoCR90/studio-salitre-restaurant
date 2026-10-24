@@ -40,7 +40,7 @@ try {
   const buffers = new Map();
   for (const url of [...new Set(slots.map(x=>x.image.url))]) {
     const response = await fetch(downloadUrl(url), { signal:AbortSignal.timeout(30000) });
-    assert.ok(response.ok(), `No se descargó una imagen: HTTP ${response.status}`);
+    assert.ok(response.ok, `No se descargó una imagen: HTTP ${response.status}`);
     assert.ok(response.headers.get('content-type')?.startsWith('image/jpeg'));
     const bytes = Buffer.from(await response.arrayBuffer());
     assert.ok(bytes.length < 20 * 1024 * 1024, 'Imagen demasiado grande');
