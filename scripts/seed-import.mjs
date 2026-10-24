@@ -17,6 +17,7 @@ const output = resolve('import-review');
 const token = process.env.SANITY_IMPORT_TOKEN || process.env.SANITY_AUTH_TOKEN;
 const client = createClient({ projectId:PROJECT, dataset:DATASET, apiVersion:'2025-02-19', perspective:'raw', useCdn:false, token, maxRetries:0, timeout:20000 });
 const created = { documents:[], assets:[] };
+let phase = 'source';
 await mkdir(output, { recursive:true });
 async function receipt(extra = {}) { await writeFile(join(output, 'import-result.json'), JSON.stringify({ ...created, ...extra }, null, 2)); }
 
@@ -26,13 +27,15 @@ try {
   assertPlanStructure(source);
   const { mockContent } = await import(pathToFileURL(join(frontend, 'src/lib/mock.ts')).href);
   const slots = imageSlots(mockContent);
+  phase = 'inventory';
   const existing = await client.fetch(`{
     "documents": *[!(_type match "sanity.*")] | order(_id asc){_id,_rev,_type},
     "allDocumentTypes": array::unique(*[]._type),
     "assets": *[_type == "sanity.imageAsset"]{_id,sha1hash,url}
-  }`, { types:TYPES });
+  }`);
   // Sin token, la lectura pública no demuestra ausencia de borradores.
   const authenticatedAudit = Boolean(token);
+  phase = 'images';
   const images = [];
   const buffers = new Map();
   for (const url of [...new Set(slots.map(x=>x.image.url))]) {
@@ -46,6 +49,7 @@ try {
     images.push({ source:url, sha256:hash(bytes), sha1, bytes:bytes.length, ...dimensions, reusedAsset:existing.assets.find(x=>x.sha1hash===sha1)?._id || null });
     buffers.set(url, bytes);
   }
+  phase = 'schema-validation';
   const schemaSource = await readFile(new URL('../schemaTypes/index.ts', import.meta.url), 'utf8');
   const validatorAssets = new Map(images.map(image=>[image.source, image.reusedAsset || `image-${image.sha1}-${image.width}x${image.height}-jpg`]));
   // Estos IDs solo se usan para validar relaciones en memoria. Nunca se escriben.
@@ -122,7 +126,10 @@ try {
     console.log('Importación y consumo real en Astro verificados. Comprueba los documentos en Studio y reconstruye Pages si no hay webhook.');
   }
 } catch (error) {
-  await receipt({ status:created.documents.length||created.assets.length?'partial-failure':'not-imported' });
+  const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : null;
+  const errorName = typeof error?.name === 'string' && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : 'Error';
+  await receipt({ status:created.documents.length||created.assets.length?'partial-failure':'not-imported', phase, statusCode, errorName });
+  console.error(`Etapa: ${phase}; HTTP: ${statusCode ?? 'no disponible'}; tipo: ${errorName}`);
   // No vuelca objetos del SDK ni cabeceras. Los detalles de validación se guardan sin credenciales.
   console.error(error instanceof Error && error.name === 'AssertionError' ? error.message : 'La preparación/importación falló. Revisa el resumen y el recibo; no se reintenta ni sobrescribe automáticamente.');
   process.exitCode = 1;
