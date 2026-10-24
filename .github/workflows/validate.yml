@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - run: npm install --global npm@11.9.0 --no-audit --no-fund
       - run: npm ci --no-audit --no-fund
       - run: npm run check
       - run: npm run build

@@ -31,9 +31,10 @@ La carta del navegador cambia al reconstruir Astro, no al compilar Studio. Confi
 
 ## Desarrollo opcional en Codex Cloud u otro equipo
 
-Node 22.22+:
+Node 22.22+ y npm 11.9.0 (la misma versión se fija en CI):
 
 ```bash
+npm install --global npm@11.9.0
 npm ci
 cp .env.example .env
 npm run dev
