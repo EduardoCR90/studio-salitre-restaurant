@@ -12,8 +12,12 @@ const singletons = [
 export default defineConfig({
  name:'salitre', title:'Salitre · Contenido', projectId, dataset,
  plugins:[structureTool({ structure: S => S.list().title('Restaurante').items([
-  ...singletons.map(item => S.listItem().title(item.title).child(S.document().schemaType(item.type).documentId(item.id))),
-  ...S.documentTypeListItems().filter(item => !singletons.some(s => s.type === item.getId())),
+  S.listItem().title('Mi restaurante').child(S.list().title('Mi restaurante').items([S.listItem().title('Historia y chef').child(S.document().schemaType('story').documentId('restaurant-story'))])),
+  S.listItem().title('Páginas y navegación').child(S.documentTypeList('page').title('Páginas y navegación').defaultOrdering([{field:'navigationOrder',direction:'asc'}])),
+  S.listItem().title('Carta y categorías').child(S.list().title('Carta y categorías').items(['category','dish'].map(type=>S.documentTypeListItem(type)))),
+  S.listItem().title('Galerías e imágenes').child(S.document().schemaType('gallery').documentId('restaurant-gallery')),
+  S.listItem().title('Promociones y avisos').child(S.documentList().title('Páginas con avisos').filter('_type == "page" && count(blocks[_type == "notice"]) > 0')),
+  S.listItem().title('Configuración').child(S.document().schemaType('settings').documentId('restaurant-settings')),
  ]) })],
  schema:{ types:schemaTypes, templates: templates => templates.filter(template => !singletons.some(s => s.type === template.schemaType)) },
  document:{ actions: (actions, context) => singletons.some(s => s.type === context.schemaType) ? actions.filter(action => !['duplicate','delete','unpublish'].includes(action.action || '')) : actions },
