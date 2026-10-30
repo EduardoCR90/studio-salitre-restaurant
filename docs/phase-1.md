@@ -61,3 +61,9 @@ Cambios de esta fase: ocho tipos originales preservados, diez objetos de bloque,
 No se necesita ni se ejecuta migración: todos los defaults son compatibles y se aplican también al leer. No ejecutes `seed:import` sobre los documentos existentes. Para una conversión masiva futura, prepara backup, plan con IDs/revisiones, parches idempotentes y prueba en otro dataset antes de solicitar autorización.
 
 Se recomienda integrar primero el frontend compatible y después publicar Studio/schema con autorización. Esta entrega no ejecuta deploy/schema:deploy, no modifica production ni cambia el webhook. Pendiente: revisión editorial en Studio publicado y publicación de una página de prueba en un proyecto de ensayo. No hay vista previa de borradores en esta fase.
+
+## Cierre y trabajo exclusivamente desde el móvil
+
+El [informe de cierre](https://github.com/EduardoCR90/restaurant-premium-sanity/blob/codex/phase-1-dynamic-blocks/docs/phase-1-closeout.md) contiene las Actions verificadas, revisión de compatibilidad, capturas móviles, prueba editorial aislada y los pasos exactos para integrar/publicar desde GitHub sin entorno local.
+
+Orden: primero PR frontend #4 y comprobar su despliegue; después PR Studio #3 y su publicación manual autorizada. Las dos PR siguen sin integrar. No usar Publish standalone Sanity Studio como despliegue de ensayo: su workflow fija hfa8zkyw/production. La vista previa interactiva y el Studio de ensayo requieren destinos distintos y autorización; las capturas se pueden revisar ahora en GitHub.
