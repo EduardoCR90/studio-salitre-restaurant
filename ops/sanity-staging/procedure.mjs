@@ -106,16 +106,29 @@ async function loadPlan(directory, expectedDigest) {
   return { plan, source };
 }
 export async function prepare(path, deps) {
+  await deps.stage?.("temporary");
   const directory = await privateDirectory(path, true);
-  assertEmpty(await deps.read(TARGET));
+  await deps.stage?.("target-read");
+  const initialTarget = await deps.read(TARGET);
+  await deps.stage?.("target-empty");
+  assertEmpty(initialTarget);
+  await deps.stage?.("source-read");
   const source = contentDocuments(await deps.read(SOURCE));
+  await deps.stage?.("source-validation");
   const summary = validateDocuments(source);
   const archive = join(directory, "production.tar.gz");
+  await deps.stage?.("export-source");
   await deps.cli("export-source", archive);
+  await deps.stage?.("export-validation");
   const parsed = await (deps.inspect || inspectArchive)(archive);
   assertArchiveDocuments(source, parsed.documents, parsed.media);
+  await deps.stage?.("source-unchanged");
   assertUnchanged(source, await deps.read(SOURCE));
-  assertEmpty(await deps.read(TARGET));
+  await deps.stage?.("target-read");
+  const finalTarget = await deps.read(TARGET);
+  await deps.stage?.("target-empty");
+  assertEmpty(finalTarget);
+  await deps.stage?.("plan");
   const snapshotHash = hash(source);
   const body = {
     version: 1,
@@ -140,6 +153,7 @@ export async function prepare(path, deps) {
   };
 }
 export async function verify(path, deps) {
+  await deps.stage?.("verification");
   const directory = await privateDirectory(path);
   const { plan, source } = await loadPlan(directory);
   const currentSource = contentDocuments(await deps.read(SOURCE));
@@ -150,7 +164,9 @@ export async function verify(path, deps) {
     directory,
     `staging-verification-${randomUUID()}.tar.gz`,
   );
+  await deps.stage?.("export-target");
   await deps.cli("export-target", verification);
+  await deps.stage?.("verification");
   const parsed = await (deps.inspect || inspectArchive)(verification);
   const sourceMatchesApprovedSnapshot =
     fingerprint(currentSource) === fingerprint(source);
@@ -184,6 +200,7 @@ export async function verify(path, deps) {
   return report;
 }
 export async function importInitial(path, confirmation, digest, deps) {
+  await deps.stage?.("import-validation");
   assert.equal(
     confirmation,
     CONFIRMATION,
@@ -201,8 +218,13 @@ export async function importInitial(path, confirmation, digest, deps) {
     plan.tools,
     "Las versiones de las herramientas han cambiado",
   );
+  await deps.stage?.("source-unchanged");
   assertUnchanged(source, await deps.read(SOURCE));
-  assertEmpty(await deps.read(TARGET));
+  await deps.stage?.("target-read");
+  const targetBeforeValidation = await deps.read(TARGET);
+  await deps.stage?.("target-empty");
+  assertEmpty(targetBeforeValidation);
+  await deps.stage?.("import-validation");
   const parsed = await (deps.inspect || inspectArchive)(
     join(directory, "production.tar.gz"),
   );
@@ -216,7 +238,11 @@ export async function importInitial(path, confirmation, digest, deps) {
   });
   try {
     // Última comprobación inmediatamente antes del único comando que escribe.
-    assertEmpty(await deps.read(TARGET));
+    await deps.stage?.("target-read");
+    const targetImmediatelyBeforeImport = await deps.read(TARGET);
+    await deps.stage?.("target-empty");
+    assertEmpty(targetImmediatelyBeforeImport);
+    await deps.stage?.("import-target");
     await deps.cli("import-target", join(directory, "production.tar.gz"));
     await save(join(directory, "import-result.json"), {
       status: "import-command-completed",

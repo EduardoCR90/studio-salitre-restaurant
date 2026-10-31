@@ -116,7 +116,7 @@ test("rechazo de contexto no prepara ni importa ni crea directorio", async () =>
     await assert.rejects(
       initializeGithubRun(
         { ...env, CLONE_CONFIRMATION: "not-authorized" },
-        { invoke: async () => calls.push("unexpected") },
+        { invoke: async () => calls.push("unexpected"), log: () => {} },
       ),
     );
     assert.deepEqual(calls, []);
@@ -157,7 +157,7 @@ test("preparación fallida no importa y elimina temporales sin imprimir el error
       }),
       (error) =>
         !error.message.includes(privateMarker) &&
-        error.message.includes("preparación"),
+        error.message.includes("herramientas"),
     );
     assert.deepEqual(
       calls.map((x) => x[0]),
@@ -177,7 +177,7 @@ test("fallo de importación no se reintenta ni deja export/plan en el runner", a
       (error) => !error.message.includes(privateMarker),
     );
     assert.equal(calls.length, 2);
-    assert.equal(logs.length, 1);
+    assert.equal(logs.length, 3);
     await assert.rejects(access(runDirectory(temporary)));
   }));
 test("plan ilegible/inválido bloquea importación sin mostrar contenido privado", async () =>
@@ -192,7 +192,7 @@ test("plan ilegible/inválido bloquea importación sin mostrar contenido privado
       (error) => !error.message.includes("invalid-private-value"),
     );
     assert.equal(calls.length, 1);
-    assert.deepEqual(logs, []);
+    assert.equal(logs.length, 2);
   }));
 test("exit cero del hijo no acredita éxito si el recibo no está verificado o usa otra huella", async () =>
   isolated(async (temporary, env) => {
@@ -205,7 +205,7 @@ test("exit cero del hijo no acredita éxito si el recibo no está verificado o u
           log: (x) => logs.push(x),
         }),
       );
-      assert.equal(logs.length, 1);
+      assert.equal(logs.length, 3);
       await assert.rejects(access(runDirectory(temporary)));
     }
   }));
@@ -239,7 +239,10 @@ test("identificadores de ejecución no admiten rutas manipuladas", async () =>
     await assert.rejects(
       initializeGithubRun(
         { ...env, GITHUB_RUN_ID: "../../outside" },
-        { invoke: async () => assert.fail("No debe invocar CLI") },
+        {
+          invoke: async () => assert.fail("No debe invocar CLI"),
+          log: () => {},
+        },
       ),
     );
   }));
@@ -256,7 +259,11 @@ test("entrada ejecutable rechaza fuera de Actions sin SDK/CLI de Sanity ni salid
     return;
   }
   assert.equal(result.status, 1);
-  assert.equal(result.stdout, "");
+  assert.match(result.stdout, /Variables \(solo presencia\):/);
+  assert.doesNotMatch(
+    result.stdout,
+    /synthetic-read-token|synthetic-staging-token/,
+  );
   assert.ok(result.stderr.includes("No se muestran datos ni errores privados"));
 });
 test("workflow solo manual, main, sin artefactos/caché/outputs y con secretos solo en el paso operativo", async () => {

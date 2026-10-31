@@ -4,6 +4,12 @@ import { join, resolve, isAbsolute } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 import { CONFIRMATION } from "./core.mjs";
+import {
+  diagnostic,
+  DiagnosticError,
+  readDiagnostic,
+  safeMessage,
+} from "./diagnostics.mjs";
 
 const REPOSITORY = "eduardocr90/studio-salitre-restaurant";
 const OWNER_FILE = ".workflow-owner";
@@ -32,10 +38,8 @@ export function authorizeRun(env) {
     "Falta confirmación exacta previa",
   );
   for (const name of ["SANITY_SOURCE_READ_TOKEN", "SANITY_STAGING_WRITE_TOKEN"])
-    assert.ok(
-      typeof env[name] === "string" && env[name].trim(),
-      "Falta un secreto requerido",
-    );
+    if (!(typeof env[name] === "string" && env[name].trim()))
+      throw new DiagnosticError(diagnostic("credentials"));
 }
 
 async function runLocation(env) {
@@ -92,11 +96,37 @@ export async function initializeGithubRun(
   { invoke = invokeCli, log = console.log } = {},
 ) {
   // Antes de crear archivos, leer secretos en hijos o contactar Sanity.
-  authorizeRun(env);
-  const location = await runLocation(env);
+  let location;
   let created = false;
-  let phase = "preparación";
+  let phase = "authorization";
+  let failed = false;
   try {
+    // Se informa solo presencia/ausencia, nunca valores ni longitudes.
+    const names = [
+      "SANITY_SOURCE_READ_TOKEN",
+      "SANITY_STAGING_WRITE_TOKEN",
+      "CLONE_CONFIRMATION",
+      "RUNNER_TEMP",
+      "GITHUB_ACTIONS",
+      "GITHUB_EVENT_NAME",
+      "GITHUB_REF",
+      "GITHUB_REPOSITORY",
+      "GITHUB_RUN_ID",
+      "GITHUB_RUN_ATTEMPT",
+    ];
+    log(
+      "Variables (solo presencia): " +
+        names
+          .map(
+            (name) =>
+              `${name}=${typeof env[name] === "string" && env[name].trim() ? "presente" : "ausente"}`,
+          )
+          .join("; "),
+    );
+    authorizeRun(env);
+    phase = "environment";
+    location = await runLocation(env);
+    phase = "temporary";
     await mkdir(location.directory, { mode: 0o700 });
     created = true;
     await writeFile(join(location.directory, OWNER_FILE), location.owner, {
@@ -106,9 +136,28 @@ export async function initializeGithubRun(
     // Incluye también las carpetas de extracción/descarga temporales de la CLI oficial.
     const cliTemporary = join(location.directory, "cli-tmp");
     await mkdir(cliTemporary, { mode: 0o700 });
-    const executionEnvironment = { ...env, TMPDIR: cliTemporary };
+    const diagnosticFile = join(location.directory, "diagnostic.json");
+    const executionEnvironment = {
+      ...env,
+      TMPDIR: cliTemporary,
+      SANITY_CLONE_DIAGNOSTIC_FILE: diagnosticFile,
+    };
+    const invokeDiagnosed = async (args) => {
+      // No reutiliza un diagnóstico de la fase previa.
+      await rm(diagnosticFile, { force: true });
+      try {
+        await invoke(args, executionEnvironment);
+      } catch (error) {
+        throw new DiagnosticError(
+          (await readDiagnostic(diagnosticFile)) || diagnostic("tools", error),
+        );
+      }
+    };
     const data = join(location.directory, "data"); // prepare exige que aún no exista.
-    await invoke(["prepare", "--directory", data], executionEnvironment);
+    phase = "prepare";
+    log("Inicio de preparación; no se ha invocado la importación.");
+    await invokeDiagnosed(["prepare", "--directory", data]);
+    phase = "plan";
     // La huella se lee del plan privado. No pasa por logs, outputs, resúmenes o artefactos.
     const plan = JSON.parse(await readFile(join(data, "plan.json"), "utf8"));
     assert.match(plan.digest || "", /^[a-f0-9]{64}$/);
@@ -116,33 +165,41 @@ export async function initializeGithubRun(
     log(
       "Preparación validada. Se aplica la autorización explícita previa para importar.",
     );
-    phase = "importación y verificación";
-    await invoke(
-      [
-        "import",
-        "--directory",
-        data,
-        "--digest",
-        digest,
-        "--confirm",
-        env.CLONE_CONFIRMATION,
-      ],
-      executionEnvironment,
-    );
+    phase = "import-validation";
+    await invokeDiagnosed([
+      "import",
+      "--directory",
+      data,
+      "--digest",
+      digest,
+      "--confirm",
+      env.CLONE_CONFIRMATION,
+    ]);
     // importInitial ya comprueba hashes, vacío, versiones, cambios de origen e igualdad final.
+    phase = "receipt";
     const receipt = JSON.parse(
       await readFile(join(data, "import-result.json"), "utf8"),
     );
     assert.equal(receipt.status, "verified");
     assert.equal(receipt.digest, digest);
     log("Inicialización de staging y comparación completadas correctamente.");
-  } catch {
-    // Nada del error original (que puede contener datos, rutas o metadatos) se imprime.
-    throw new Error(
-      `Fase de ${phase} detenida. Revisa staging antes de autorizar otra ejecución; no se reintenta ni se borra contenido remoto.`,
+  } catch (error) {
+    failed = true;
+    throw new DiagnosticError(
+      error instanceof DiagnosticError
+        ? error.diagnostic
+        : diagnostic(phase, error),
     );
   } finally {
-    if (created) await rm(location.directory, { recursive: true, force: true });
+    if (created) {
+      try {
+        await rm(location.directory, { recursive: true, force: true });
+      } catch (error) {
+        // No oculta el fallo operativo anterior si también falla la limpieza.
+        log(safeMessage(error, "cleanup"));
+        if (!failed) throw new DiagnosticError(diagnostic("cleanup", error));
+      }
+    }
   }
 }
 
@@ -157,9 +214,12 @@ if (
       assert.equal(process.argv.length, 2);
       await initializeGithubRun(process.env);
     }
-  } catch {
+  } catch (error) {
     console.error(
-      "Inicialización/limpieza no completada. Revisa el estado de staging antes de autorizar otra ejecución. No se muestran datos ni errores privados.",
+      safeMessage(
+        error,
+        process.argv[2] === "cleanup" ? "cleanup" : "authorization",
+      ),
     );
     process.exitCode = 1;
   }
