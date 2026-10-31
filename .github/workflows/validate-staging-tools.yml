@@ -1,0 +1,31 @@
+name: Validate staging clone tools (offline)
+on:
+  pull_request:
+    paths:
+      - ops/sanity-staging/**
+      - .github/workflows/validate-staging-tools.yml
+  push:
+    branches: [main]
+    paths:
+      - ops/sanity-staging/**
+      - .github/workflows/validate-staging-tools.yml
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test only synthetic documents and local archives
+        run: node --test ops/sanity-staging/*.test.mjs
+      - name: Check operation scripts syntax (no remote invocation)
+        run: |
+          node --check ops/sanity-staging/cli.mjs
+          node --check ops/sanity-staging/procedure.mjs
+          node --check ops/sanity-staging/archive.mjs

@@ -7,3 +7,6 @@ dist/
 *.log
 frontend/
 import-review/
+# Exports reales: las herramientas exigen además un directorio privado fuera de Git.
+*.tar.gz
+sanity-dataset-backups/
