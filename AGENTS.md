@@ -8,3 +8,5 @@
 - No guardar tokens en Git ni en variables SANITY_STUDIO_. Los tokens de automatización solo se leen desde secretos de Actions.
 - Antes de entregar: npm ci, npm run check, npm run build. Publicar con el workflow manual solo cuando existan credenciales autorizadas.
 - No importar ejemplos sobre contenido existente ni reemplazar documentos. No registrar cabeceras ni valores de tokens.
+
+- Iteración 1: mantener opcionales page.composition, settings.editorial y settings.socialImage. La fixture editorial común y docs/editorial-compatibility.md coordinan el contrato. No materializar defaults en documentos ni convertir composiciones originales a bloques automáticamente.

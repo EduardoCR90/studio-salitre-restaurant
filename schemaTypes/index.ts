@@ -1,12 +1,14 @@
 import { defineType, defineField, defineArrayMember } from 'sanity';
-import {blockTypes,blockNames,contentLink,richBody} from './blocks';
-import {theme,modulePreferences} from './restaurant';
+import {blockTypes,blockNames,contentLink,richBody} from './blocks.ts';
+import {theme,modulePreferences} from './restaurant.ts';
+import {editorialHeading,pageComposition,siteEditorial} from './editorial.ts';
 const requiredText = (name: string, title: string) => defineField({ name, title, type:'string', validation: Rule => Rule.required() });
 const requiredBody = (name: string, title: string) => defineField({ name, title, type:'text', rows:4, validation: Rule => Rule.required() });
 const image = defineType({ name:'editorialImage', title:'Imagen editorial', type:'image', options:{ hotspot:true }, fields:[requiredText('alt','Texto alternativo (describe la imagen)')] });
 const seo = defineType({ name:'seo', title:'SEO', type:'object', fields:[requiredText('title','Título'), defineField({ name:'description', title:'Descripción', type:'text', validation: Rule => Rule.required().max(180) }), defineField({ name:'image', title:'Imagen social', type:'editorialImage' })] });
 const settings = defineType({ name:'settings', title:'Configuración general', type:'document', groups:[{name:'identity',title:'Identidad',default:true},{name:'contact',title:'Contacto y horarios'},{name:'future',title:'Módulos futuros'}], fields:[
  defineField({name:'logo',title:'Logotipo (opcional)',type:'editorialImage'}),defineField({name:'theme',title:'Identidad visual',type:'restaurantTheme'}),defineField({name:'modules',title:'Preferencias de módulos futuros',type:'modulePreferences'}),
+ defineField({name:'editorial',title:'Textos de cabecera, pie y carta',type:'siteEditorial'}),defineField({name:'socialImage',title:'Imagen social predeterminada',type:'editorialImage'}),
  requiredText('name','Nombre'), requiredText('tagline','Firma de marca'), requiredBody('concept','Concepto gastronómico'),
  requiredText('address','Dirección'), defineField({ name:'email',title:'Email',type:'string',validation:Rule=>Rule.required().email() }), requiredText('phone','Teléfono'),
  defineField({ name:'isFictional',title:'Restaurante ficticio / demostración',type:'boolean',initialValue:true,validation:Rule=>Rule.required() }),
@@ -14,6 +16,7 @@ const settings = defineType({ name:'settings', title:'Configuración general', t
  defineField({ name:'hours',title:'Horarios',type:'array',validation:Rule=>Rule.required().min(1),of:[defineArrayMember({type:'object',name:'openingHours',fields:[requiredText('days','Días'),requiredText('time','Horario')]})] }),
 ].map(field=>({...field,group:field.name==='modules'?'future':['address','email','phone','hours','reservationUrl'].includes(field.name)?'contact':'identity'})) });
 const page = defineType({name:'page',title:'Página',type:'document',initialValue:{status:'published',showInNavigation:true,navigationOrder:4,noindex:false},groups:[{name:'content',title:'Contenido',default:true},{name:'navigation',title:'Ruta y navegación'},{name:'seo',title:'Buscadores'}],fields:[
+ defineField({name:'composition',title:'Textos de la composición original',group:'content',type:'pageComposition',description:'Solo aplica a las cuatro composiciones originales sin bloques. No cambia ni convierte la página.'}),
  defineField({name:'slug',title:'Ruta de la página',group:'navigation',type:'slug',options:{source:'title',maxLength:80},description:'inicio conserva la portada. Usa minúsculas, números y guiones. Las rutas carta, restaurante y reservas conservan sus composiciones si no añades bloques.',validation:Rule=>Rule.required().custom(value=>!!value?.current && value.current.length<=80 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.current) && !['index','404','admin','dashboard','api','assets','_astro','robots','robots.txt','sitemap','sitemap.xml'].includes(value.current) || 'Ruta inválida o reservada')}),
  defineField({name:'status',title:'Visibilidad pública',group:'navigation',type:'string',options:{list:[{title:'Publicada',value:'published'},{title:'Oculta',value:'hidden'}]},description:'Los borradores nunca se publican. Oculta retira también la ruta en la siguiente reconstrucción.'}),
  defineField({name:'showInNavigation',title:'Mostrar en el menú',group:'navigation',type:'boolean'}),
@@ -37,4 +40,4 @@ const dish = defineType({name:'dish',title:'Plato',type:'document',initialValue:
 ],preview:{select:{title:'name',media:'image',visible:'visible',available:'available'},prepare:({title,media,visible,available})=>({title,media,subtitle:visible===false?'Oculto':available===false?'Visible · Agotado':'Visible · Disponible'})}});
 const story = defineType({name:'story',title:'Historia',type:'document',fields:[requiredBody('title','Título'),requiredBody('body','Historia'),requiredBody('philosophy','Filosofía'),requiredText('chefName','Chef'),requiredBody('chefBio','Biografía'),defineField({name:'image',title:'Imagen del equipo o de cocina',type:'editorialImage'})]});
 const gallery = defineType({name:'gallery',title:'Galería',type:'document',fields:[defineField({name:'images',title:'Fotografías',type:'array',of:[defineArrayMember({type:'editorialImage'})],validation:Rule=>Rule.required()})]});
-export const schemaTypes = [image,seo,contentLink,richBody,...blockTypes,theme,modulePreferences,settings,page,category,dish,story,gallery];
+export const schemaTypes = [image,seo,contentLink,richBody,...blockTypes,editorialHeading,pageComposition,siteEditorial,theme,modulePreferences,settings,page,category,dish,story,gallery];

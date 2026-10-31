@@ -51,3 +51,7 @@ El Studio local se abre en http://localhost:3333. `npm run schema:deploy` y `npm
 ## Importar la demo existente
 
 Se prepara una importación inicial sin sobrescrituras mediante auditoría de solo lectura y confirmación expresa. Consulta [docs/import-demo.md](docs/import-demo.md). El workflow de auditoría muestra documentos existentes, compatibilidad, imágenes y huella del plan. El workflow de importación no se ejecuta automáticamente: requiere la frase de confirmación y la huella aprobada. No se ha importado contenido al añadir estos archivos.
+
+## Compatibilidad editorial — iteración 1
+
+Consulta [el contrato aditivo y el inventario coordinado](docs/editorial-compatibility.md). No requiere migrar documentos ni habilita escrituras del dashboard en production.
