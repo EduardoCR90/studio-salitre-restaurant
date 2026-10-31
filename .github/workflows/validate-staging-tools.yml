@@ -32,3 +32,4 @@ jobs:
           node --check ops/sanity-staging/procedure.mjs
           node --check ops/sanity-staging/archive.mjs
           node --check ops/sanity-staging/github-run.mjs
+          node --check ops/sanity-staging/diagnostics.mjs

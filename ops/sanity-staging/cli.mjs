@@ -5,6 +5,14 @@ import { spawn } from "node:child_process";
 import { createClient } from "@sanity/client";
 import { cliSpec, PROJECT, SOURCE, TARGET } from "./core.mjs";
 import { prepare, importInitial, verify } from "./procedure.mjs";
+import { diagnostic, writeDiagnostic, safeMessage } from "./diagnostics.mjs";
+
+let phase = "tools";
+const diagnosticFile = process.env.SANITY_CLONE_DIAGNOSTIC_FILE;
+async function stage(next) {
+  phase = next;
+  await writeDiagnostic(diagnosticFile, diagnostic(phase));
+}
 
 process.umask(0o077);
 const root = resolve(import.meta.dirname, "../..");
@@ -16,6 +24,7 @@ if (!operation || operation === "--help") {
   process.exit(0);
 }
 try {
+  await stage("tools");
   assert.ok(
     ["prepare", "import", "verify"].includes(operation),
     "Operación inválida",
@@ -57,6 +66,7 @@ try {
     ]),
   );
   const deps = {
+    stage,
     async tools() {
       const lock = JSON.parse(
         await readFile(join(root, "package-lock.json"), "utf8"),
@@ -181,12 +191,10 @@ try {
     );
   if (result.status === "different") process.exitCode = 1;
 } catch (error) {
-  console.error(
-    error?.code === "EEXIST"
-      ? "El directorio/plan ya existe o la importación ya se inició; revisar sin sobrescribir."
-      : error?.name === "AssertionError"
-        ? String(error.message).split("\n")[0]
-        : "Operación detenida. Comprueba autenticación, conectividad y estado privado; no se muestran credenciales ni respuestas del servidor.",
-  );
+  // Solo códigos permitidos; nunca se vuelca el error original en el canal privado.
+  try {
+    await writeDiagnostic(diagnosticFile, diagnostic(phase, error));
+  } catch {}
+  console.error(safeMessage(error, phase));
   process.exitCode = 1;
 }
