@@ -1,26 +1,40 @@
 import { defineType, defineField, defineArrayMember } from 'sanity';
+import {blockTypes,blockNames,contentLink,richBody} from './blocks';
+import {theme,modulePreferences} from './restaurant';
 const requiredText = (name: string, title: string) => defineField({ name, title, type:'string', validation: Rule => Rule.required() });
 const requiredBody = (name: string, title: string) => defineField({ name, title, type:'text', rows:4, validation: Rule => Rule.required() });
 const image = defineType({ name:'editorialImage', title:'Imagen editorial', type:'image', options:{ hotspot:true }, fields:[requiredText('alt','Texto alternativo (describe la imagen)')] });
 const seo = defineType({ name:'seo', title:'SEO', type:'object', fields:[requiredText('title','Título'), defineField({ name:'description', title:'Descripción', type:'text', validation: Rule => Rule.required().max(180) }), defineField({ name:'image', title:'Imagen social', type:'editorialImage' })] });
-const settings = defineType({ name:'settings', title:'Configuración general', type:'document', fields:[
+const settings = defineType({ name:'settings', title:'Configuración general', type:'document', groups:[{name:'identity',title:'Identidad',default:true},{name:'contact',title:'Contacto y horarios'},{name:'future',title:'Módulos futuros'}], fields:[
+ defineField({name:'logo',title:'Logotipo (opcional)',type:'editorialImage'}),defineField({name:'theme',title:'Identidad visual',type:'restaurantTheme'}),defineField({name:'modules',title:'Preferencias de módulos futuros',type:'modulePreferences'}),
  requiredText('name','Nombre'), requiredText('tagline','Firma de marca'), requiredBody('concept','Concepto gastronómico'),
  requiredText('address','Dirección'), defineField({ name:'email',title:'Email',type:'string',validation:Rule=>Rule.required().email() }), requiredText('phone','Teléfono'),
  defineField({ name:'isFictional',title:'Restaurante ficticio / demostración',type:'boolean',initialValue:true,validation:Rule=>Rule.required() }),
  defineField({ name:'reservationUrl',title:'URL del proveedor real de reservas',type:'url',description:'Solo se activa si el restaurante ya no es ficticio.',validation:Rule=>Rule.uri({scheme:['https']}) }),
  defineField({ name:'hours',title:'Horarios',type:'array',validation:Rule=>Rule.required().min(1),of:[defineArrayMember({type:'object',name:'openingHours',fields:[requiredText('days','Días'),requiredText('time','Horario')]})] }),
-] });
-const page = defineType({name:'page',title:'Página',type:'document',fields:[
- defineField({name:'slug',title:'Ruta lógica',type:'slug',description:'Crear exactamente: inicio, carta, restaurante y reservas.',validation:Rule=>Rule.required().custom(value => ['inicio','carta','restaurante','reservas'].includes(value?.current || '') || 'Usa una de las cuatro rutas admitidas')}),
- requiredText('eyebrow','Antetítulo'),requiredBody('title','Titular (admite saltos de línea)'),requiredBody('intro','Introducción'),defineField({name:'image',title:'Fotografía',type:'editorialImage'}),defineField({name:'seo',title:'Metadatos SEO',type:'seo',validation:Rule=>Rule.required()}),
-],preview:{select:{title:'title',subtitle:'slug.current'}}});
-const category = defineType({name:'category',title:'Categoría de carta',type:'document',fields:[requiredText('name','Nombre'),defineField({name:'note',title:'Nota editorial',type:'string'}),defineField({name:'order',title:'Orden',type:'number',validation:Rule=>Rule.required().integer().min(0)})]});
-const dish = defineType({name:'dish',title:'Plato',type:'document',initialValue:{available:true,featured:false,allergens:[],order:0},fields:[
+].map(field=>({...field,group:field.name==='modules'?'future':['address','email','phone','hours','reservationUrl'].includes(field.name)?'contact':'identity'})) });
+const page = defineType({name:'page',title:'Página',type:'document',initialValue:{status:'published',showInNavigation:true,navigationOrder:4,noindex:false},groups:[{name:'content',title:'Contenido',default:true},{name:'navigation',title:'Ruta y navegación'},{name:'seo',title:'Buscadores'}],fields:[
+ defineField({name:'slug',title:'Ruta de la página',group:'navigation',type:'slug',options:{source:'title',maxLength:80},description:'inicio conserva la portada. Usa minúsculas, números y guiones. Las rutas carta, restaurante y reservas conservan sus composiciones si no añades bloques.',validation:Rule=>Rule.required().custom(value=>!!value?.current && value.current.length<=80 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.current) && !['index','404','admin','dashboard','api','assets','_astro','robots','robots.txt','sitemap','sitemap.xml'].includes(value.current) || 'Ruta inválida o reservada')}),
+ defineField({name:'status',title:'Visibilidad pública',group:'navigation',type:'string',options:{list:[{title:'Publicada',value:'published'},{title:'Oculta',value:'hidden'}]},description:'Los borradores nunca se publican. Oculta retira también la ruta en la siguiente reconstrucción.'}),
+ defineField({name:'showInNavigation',title:'Mostrar en el menú',group:'navigation',type:'boolean'}),
+ defineField({name:'navigationLabel',title:'Texto en el menú',group:'navigation',type:'string',description:'Vacío: usa el nombre habitual o el título de la página.'}),
+ defineField({name:'navigationOrder',title:'Orden en el menú',group:'navigation',type:'number',validation:Rule=>Rule.integer().min(0)}),
+ defineField({...requiredText('eyebrow','Antetítulo'),group:'content',validation:undefined}),
+ defineField({...requiredBody('title','Titular (admite saltos de línea)'),group:'content'}),
+ defineField({...requiredBody('intro','Introducción'),group:'content',validation:undefined}),
+ defineField({name:'image',title:'Fotografía de la composición original',group:'content',type:'editorialImage'}),
+ defineField({name:'blocks',title:'Bloques de contenido',group:'content',type:'array',description:'Arrastra para ordenar. Vacío conserva la composición original de las cuatro páginas existentes. Añadir bloques sustituye la composición, sin borrar sus campos originales.',of:blockNames.map(type=>defineArrayMember({type}))}),
+ defineField({name:'seo',title:'Metadatos SEO',group:'seo',type:'seo',validation:Rule=>Rule.required()}),
+ defineField({name:'noindex',title:'Excluir de buscadores',group:'seo',type:'boolean'}),
+],orderings:[{title:'Orden en navegación',name:'navigationOrder',by:[{field:'navigationOrder',direction:'asc'}]}],preview:{select:{title:'title',subtitle:'slug.current',media:'image'}}});
+const category = defineType({name:'category',title:'Categoría de carta',type:'document',initialValue:{order:0,visible:true},orderings:[{title:'Orden en carta',name:'menuOrder',by:[{field:'order',direction:'asc'}]}],preview:{select:{title:'name'}},fields:[defineField({name:'visible',title:'Visible en carta',description:'Al ocultar una categoría se ocultan también sus platos en la web.',type:'boolean',initialValue:true}),requiredText('name','Nombre'),defineField({name:'note',title:'Nota editorial',type:'string'}),defineField({name:'order',title:'Orden',type:'number',validation:Rule=>Rule.required().integer().min(0)})]});
+const dish = defineType({name:'dish',title:'Plato',type:'document',initialValue:{available:true,visible:true,featured:false,allergens:[],tags:[],order:0},orderings:[{title:'Orden en carta',name:'menuOrder',by:[{field:'order',direction:'asc'}]}],fields:[
+ defineField({name:'visible',title:'Visible en carta',type:'boolean',description:'Desactivado: no aparece. Visible y no disponible: se muestra como agotado.'}),defineField({name:'tags',title:'Etiquetas opcionales',type:'array',of:[{type:'string'}],validation:Rule=>Rule.unique()}),
  requiredText('name','Nombre'),requiredBody('description','Descripción'),defineField({name:'price',title:'Precio (EUR, IVA incluido)',type:'number',validation:Rule=>Rule.required().min(0).precision(2)}),
  defineField({name:'category',title:'Categoría',type:'reference',to:[{type:'category'}],validation:Rule=>Rule.required()}),
- defineField({name:'image',title:'Fotografía',type:'editorialImage'}),defineField({name:'allergens',title:'Alérgenos',type:'array',of:[{type:'string'}],validation:Rule=>Rule.required().unique()}),
- defineField({name:'available',title:'Disponible',type:'boolean',validation:Rule=>Rule.required()}),defineField({name:'featured',title:'Destacado en inicio',type:'boolean',validation:Rule=>Rule.required()}),defineField({name:'order',title:'Orden',type:'number',validation:Rule=>Rule.required().integer().min(0)}),
-],preview:{select:{title:'name',media:'image'}}});
+ defineField({name:'image',title:'Fotografía',type:'editorialImage'}),defineField({name:'allergens',title:'Alérgenos',type:'array',of:[{type:'string'}],validation:Rule=>Rule.required().unique().custom(value=>!value || value.every(v=>typeof v === 'string' && v.trim().length>0 && v.length<=80) || 'Cada alérgeno debe tener entre 1 y 80 caracteres')}),
+ defineField({name:'available',title:'Disponible',description:'Si está visible y desmarcas esta opción, se mostrará como temporalmente no disponible.',type:'boolean',validation:Rule=>Rule.required()}),defineField({name:'featured',title:'Destacado en inicio',type:'boolean',validation:Rule=>Rule.required()}),defineField({name:'order',title:'Orden',type:'number',validation:Rule=>Rule.required().integer().min(0)}),
+],preview:{select:{title:'name',media:'image',visible:'visible',available:'available'},prepare:({title,media,visible,available})=>({title,media,subtitle:visible===false?'Oculto':available===false?'Visible · Agotado':'Visible · Disponible'})}});
 const story = defineType({name:'story',title:'Historia',type:'document',fields:[requiredBody('title','Título'),requiredBody('body','Historia'),requiredBody('philosophy','Filosofía'),requiredText('chefName','Chef'),requiredBody('chefBio','Biografía'),defineField({name:'image',title:'Imagen del equipo o de cocina',type:'editorialImage'})]});
 const gallery = defineType({name:'gallery',title:'Galería',type:'document',fields:[defineField({name:'images',title:'Fotografías',type:'array',of:[defineArrayMember({type:'editorialImage'})],validation:Rule=>Rule.required()})]});
-export const schemaTypes = [image,seo,settings,page,category,dish,story,gallery];
+export const schemaTypes = [image,seo,contentLink,richBody,...blockTypes,theme,modulePreferences,settings,page,category,dish,story,gallery];

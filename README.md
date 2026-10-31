@@ -2,7 +2,7 @@
 
 Sanity Studio independiente para **Salitre-restaurant**, proyecto `hfa8zkyw`, dataset `production`. La web Astro sigue en [restaurant-premium-sanity](https://github.com/EduardoCR90/restaurant-premium-sanity). Este repositorio no contiene Astro ni se publica en GitHub Pages.
 
-Los esquemas y la estructura se migran del Studio ya existente, sin cambiar nombres de tipos, campos ni IDs singleton. Aquí pasa a estar su única fuente de verdad. El frontend conserva su cliente Sanity, consultas, validación y demo de respaldo. No se han creado ni sustituido documentos del dataset.
+La fase 1 amplía de forma aditiva los esquemas del Studio existente, conservando nombres de tipos, campos e IDs singleton. Consulta [la guía editorial y de compatibilidad](docs/phase-1.md). Aquí pasa a estar su única fuente de verdad. El frontend conserva su cliente Sanity, consultas, validación y demo de respaldo. No se han creado ni sustituido documentos del dataset.
 
 ## Trabajar solo con GitHub y el navegador
 
@@ -13,7 +13,7 @@ Los esquemas y la estructura se migran del Studio ya existente, sin cambiar nomb
 5. Solo si el deploy termina correctamente, abre `https://<hostname>.sanity.studio/` e inicia sesión con tu cuenta Sanity. La publicación del Studio no evita los permisos de acceso del proyecto: invita a los editores desde Manage.
 6. Si necesitas configurar CORS en Manage → API → CORS origins, permite únicamente el origen HTTPS exacto del Studio con credenciales. No uses `*` con credenciales. La web Astro consulta Sanity durante la build y no necesita CORS del navegador.
 
-No se ha publicado el Studio ni desplegado el schema sin un token autorizado. La URL anterior es una propuesta, no un servicio verificado.
+Esta fase no ha publicado Studio ni schemas. La configuración de despliegue anterior se conserva; no se vuelve a ejecutar al preparar las PR.
 
 ## Crear contenido desde el navegador
 
@@ -21,11 +21,11 @@ En Studio encontrarás:
 
 - **Configuración y contacto**: nombre, concepto, dirección, horarios, correo, teléfono y URL opcional del proveedor de reservas. Mantén `isFictional` activado mientras sea demostración.
 - **Historia y chef** y **Galería editorial**: los documentos singleton mantienen sus IDs anteriores.
-- **Página**: crea una por slug lógico `inicio`, `carta`, `restaurante` y `reservas`. Rellena textos y SEO. No crees dos páginas con el mismo slug.
+- **Páginas y navegación**: conserva las cuatro páginas lógicas y crea nuevas páginas por slug. Configura SEO, menú y bloques ordenables. Una página original sin bloques mantiene su diseño anterior.
 - **Categoría de carta**: nombre, nota y orden.
 - **Plato**: nombre, descripción, precio EUR, referencia a categoría, alérgenos, disponibilidad, destacado e imagen.
 
-Sube fotografías con texto alternativo y publica los documentos. Al principio el dataset está vacío: Astro muestra demo explícita. Para la primera versión completa publica configuración, historia, galería (puede estar vacía), las cuatro páginas y las categorías/platos. Datos publicados incompletos detienen una nueva build para conservar la web anterior; no se mezclan silenciosamente con ejemplos.
+Sube fotografías con texto alternativo y publica los documentos. Salitre ya contiene 22 documentos publicados; no vuelvas a importar ejemplos. Un proyecto nuevo vacío muestra demo explícita en Astro. Para la primera versión completa publica configuración, historia, galería (puede estar vacía), las cuatro páginas y las categorías/platos. Datos publicados incompletos detienen una nueva build para conservar la web anterior; no se mezclan silenciosamente con ejemplos.
 
 La carta del navegador cambia al reconstruir Astro, no al compilar Studio. Configura después el webhook documentado en [el frontend](https://github.com/EduardoCR90/restaurant-premium-sanity/blob/main/docs/sanity-setup.md). No necesita un servidor adicional: Sanity solicita la ejecución del workflow de Pages con un token GitHub de permisos mínimos guardado únicamente en la configuración privada del webhook.
 
@@ -46,7 +46,7 @@ El Studio local se abre en http://localhost:3333. `npm run schema:deploy` y `npm
 
 ## Modelo
 
-`schemaTypes/index.ts` registra `editorialImage`, `seo`, `settings`, `page`, `category`, `dish`, `story` y `gallery`. `sanity.config.ts` controla singletons y estructura; `sanity.cli.ts` define proyecto, dataset y hostname. Antes de modificar un campo, revisa su consulta GROQ y contrato Zod en el frontend.
+`schemaTypes/index.ts` registra `editorialImage`, `seo`, `settings`, `page`, `category`, `dish`, `story` y `gallery`. `sanity.config.ts` controla singletons y estructura; `sanity.cli.ts` define proyecto, dataset y hostname. También registra objetos de bloques (`schemaTypes/blocks.ts`), identidad visual y preferencias futuras de módulos (`schemaTypes/restaurant.ts`). Antes de modificar un campo, revisa su consulta GROQ y contrato Zod en el frontend.
 
 ## Importar la demo existente
 
