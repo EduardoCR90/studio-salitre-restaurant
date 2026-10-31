@@ -1,0 +1,45 @@
+name: Initialize Sanity staging (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Autoriza preparar, importar y verificar en la misma ejecución: escribe CLONAR production -> staging"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sanity-hfa8zkyw-staging-initialization
+  cancel-in-progress: false
+
+jobs:
+  initialize:
+    if: github.ref == 'refs/heads/main' && github.repository == 'EduardoCR90/studio-salitre-restaurant' && github.run_attempt == 1 && inputs.confirmation == 'CLONAR production -> staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned package manager
+        run: npm install --global npm@11.9.0 --no-audit --no-fund
+      - name: Install locked official tools without runtime secrets
+        run: npm ci --no-audit --no-fund
+      - name: Validate with synthetic data only
+        run: node --test ops/sanity-staging/*.test.mjs
+      - name: Prepare, import the same export, and verify (prior authorization)
+        env:
+          CLONE_CONFIRMATION: ${{ inputs.confirmation }}
+          SANITY_SOURCE_READ_TOKEN: ${{ secrets.SANITY_SOURCE_READ_TOKEN }}
+          SANITY_STAGING_WRITE_TOKEN: ${{ secrets.SANITY_STAGING_WRITE_TOKEN }}
+        run: node ops/sanity-staging/github-run.mjs
+      - name: Remove only this run's private temporary data
+        if: always()
+        run: node ops/sanity-staging/github-run.mjs cleanup
