@@ -1,6 +1,6 @@
 # Inicialización segura: production → staging
 
-Herramientas de operación separadas del Studio. Proyecto fijo `hfa8zkyw`; origen fijo `production`; único destino de importación `staging`. No se cambian Astro, el dashboard SaaS, esquemas, configuración, componentes o despliegue del Studio. Esta PR **no consulta ni modifica los datasets**: solo incorpora scripts, pruebas aisladas y esta guía.
+Herramientas de operación separadas del Studio. Para la alternativa de una ejecución manual en GitHub con confirmación previa, consulta [github-actions.md](github-actions.md). Proyecto fijo `hfa8zkyw`; origen fijo `production`; único destino de importación `staging`. No se cambian Astro, el dashboard SaaS, esquemas, configuración, componentes o despliegue del Studio. Esta PR **no consulta ni modifica los datasets**: solo incorpora scripts, pruebas aisladas y esta guía.
 
 ## Alcance y garantías
 
@@ -24,7 +24,7 @@ Configura **fuera del repositorio y del chat**, en los secretos del entorno segu
 
 No necesitas permisos para borrar/crear datasets ni escribir en production. No se usa como fallback el token global del Studio. Un rol Editor puede incluir más permisos de los estrictamente necesarios: usa un rol limitado por dataset si está disponible. Si solo puedes usar un token de proyecto para staging, estos scripts siguen fijando el destino, pero ese token usado fuera del procedimiento conserva sus permisos originales.
 
-No pongas tokens en argumentos, variables SANITY_STUDIO_, archivos de Git, capturas o logs. Para automatización, inyecta las dos variables desde GitHub Actions Secrets en una ejecución manual futura y autorizada; no recuperes ni copies sus valores al chat o al repositorio. Desde Codex Cloud puedes preparar esa ejecución sin publicar los secretos. Esta PR no añade un workflow que ejecute operaciones remotas ni distribuye exports como artefactos de Actions. La CI de estas herramientas solo trabaja con datos sintéticos sin credenciales.
+No pongas tokens en argumentos, variables SANITY_STUDIO_, archivos de Git, capturas o logs. Para automatización, inyecta las dos variables desde GitHub Actions Secrets en una ejecución manual futura y autorizada; no recuperes ni copies sus valores al chat o al repositorio. Desde Codex Cloud puedes preparar esa ejecución sin publicar los secretos. La validación offline no ejecuta operaciones remotas ni distribuye exports como artefactos de Actions. El [workflow manual opcional](github-actions.md) requiere confirmación previa explícita y mantiene todo el export en el mismo job efímero. La CI de estas herramientas solo trabaja con datos sintéticos sin credenciales.
 
 ## 1. Preparar e inspeccionar, cuando se autoricen las lecturas
 

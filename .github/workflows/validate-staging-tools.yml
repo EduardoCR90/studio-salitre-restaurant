@@ -4,11 +4,13 @@ on:
     paths:
       - ops/sanity-staging/**
       - .github/workflows/validate-staging-tools.yml
+      - .github/workflows/initialize-sanity-staging.yml
   push:
     branches: [main]
     paths:
       - ops/sanity-staging/**
       - .github/workflows/validate-staging-tools.yml
+      - .github/workflows/initialize-sanity-staging.yml
 permissions:
   contents: read
 jobs:
@@ -29,3 +31,4 @@ jobs:
           node --check ops/sanity-staging/cli.mjs
           node --check ops/sanity-staging/procedure.mjs
           node --check ops/sanity-staging/archive.mjs
+          node --check ops/sanity-staging/github-run.mjs
