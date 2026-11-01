@@ -30,6 +30,10 @@ jobs:
         working-directory: frontend
       - run: npm run seed:export
         working-directory: frontend
+      - name: Verify cross-repository TypeScript source compatibility (no remote requests)
+        run: node --test scripts/seed-source.test.mjs
+        env:
+          SEED_FRONTEND: frontend
       - run: npm run seed:audit
         env:
           SANITY_IMPORT_TOKEN: ${{ secrets.SANITY_IMPORT_TOKEN || secrets.SANITY_AUTH_TOKEN }}

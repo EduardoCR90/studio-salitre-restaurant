@@ -1,3 +1,4 @@
+import {sectionLabels} from './visual.ts';
 import { defineType, defineField } from "sanity";
 const copyField = (name: string, title: string) =>
   defineField({
@@ -58,6 +59,7 @@ export const pageComposition = defineType({
   description:
     "Opcional. Sin valores se conserva el texto histórico; no añade bloques ni cambia la composición.",
   fields: [
+    defineField({name:'sections',title:'Secciones visibles',type:'object',fields:Object.entries(sectionLabels).map(([name,title])=>defineField({name,title,type:'boolean',description:'Sin valor conserva la sección visible.'}))}),
     defineField({
       name: "hero",
       title: "Hero original",
