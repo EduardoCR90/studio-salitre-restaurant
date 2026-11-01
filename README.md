@@ -55,3 +55,7 @@ Se prepara una importación inicial sin sobrescrituras mediante auditoría de so
 ## Compatibilidad editorial — iteración 1
 
 Consulta [el contrato aditivo y el inventario coordinado](docs/editorial-compatibility.md). No requiere migrar documentos ni habilita escrituras del dashboard en production.
+
+## Fase 5 · Variantes visuales y composición
+
+[Contrato, controles editoriales, despliegue y validación](docs/visual-themes.md). Presets Elegant/Modern/Casual y variantes opcionales, sin migrar contenido.

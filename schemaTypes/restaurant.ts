@@ -1,12 +1,13 @@
 import {defineType,defineField,defineArrayMember} from 'sanity';
-const color = (name:string,title:string,initialValue:string) => defineField({name,title,type:'string',initialValue,description:'Color hexadecimal #RRGGBB. Comprueba el contraste antes de publicar.',validation:Rule=>Rule.regex(/^#[0-9a-fA-F]{6}$/)});
-export const theme = defineType({name:'restaurantTheme',title:'Identidad visual',type:'object',fields:[
- defineField({name:'name',title:'Tema',type:'string',initialValue:'salitre',options:{list:[{title:'Salitre editorial',value:'salitre'}]}}),
- color('paper','Fondo','#ece8df'),color('ink','Texto','#252d27'),color('accent','Acento','#95462f'),
- defineField({name:'font',title:'Tipografía de titulares',type:'string',initialValue:'editorial',options:{list:[{title:'Serif editorial',value:'editorial'},{title:'Sans serif',value:'sans'}]}}),
- defineField({name:'button',title:'Botones',type:'string',initialValue:'solid',options:{list:[{title:'Relleno',value:'solid'},{title:'Contorno',value:'outline'}]}}),
- defineField({name:'cards',title:'Tarjetas',type:'string',initialValue:'editorial',options:{list:[{title:'Editorial',value:'editorial'},{title:'Compacta',value:'compact'}]}}),
-]});
+import {visualTokenSchemas,visualLabels,storedThemeSchema,presetNames,optionLabels} from './visual.ts';
+export const theme=defineType({name:'restaurantTheme',title:'Identidad visual',type:'object',fields:[
+ defineField({name:'preset',title:'Preset visual',type:'string',options:{list:presetNames.map(value=>({title:value[0].toUpperCase()+value.slice(1),value}))}}),
+ ...Object.entries(visualTokenSchemas).map(([name,schema])=>{
+  const base={name,title:visualLabels[name as keyof typeof visualLabels],description:'Opcional: vacío hereda el preset o la configuración compatible de la web.'};
+  if(schema.type==='number')return defineField({...base,type:'number'});
+  return defineField({...base,type:'string',...('options' in schema?{options:{list:(schema.options as string[]).map(value=>({title:optionLabels[value]||value,value}))}}:{})});
+ }),
+],validation:Rule=>Rule.custom(value=>value==null||storedThemeSchema.safeParse(value).success||'Revisa colores, rangos y variantes visuales')});
 export const modulePreferences = defineType({name:'modulePreferences',title:'Preferencias de módulos',type:'array',description:'Solo preferencias de presentación. La contratación y autorización se comprobarán en un futuro backend; estos campos no activan funcionalidades.',of:[defineArrayMember({name:'modulePreference',type:'object',fields:[
  defineField({name:'key',title:'Módulo',type:'string',options:{list:[{title:'Reservas',value:'reservations'},{title:'Empleados',value:'staff'},{title:'Carta QR',value:'qrMenu'},{title:'Eventos',value:'events'},{title:'Analíticas',value:'analytics'}]},validation:Rule=>Rule.required()}),
  defineField({name:'enabled',title:'Solicitar activación',type:'boolean',initialValue:false}),
