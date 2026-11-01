@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { loadFrontendMock } from './seed-source.mjs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createClient } from '@sanity/client';
@@ -25,7 +25,7 @@ try {
   // El exportador existente se ejecuta antes en el workflow, sin escribir en Sanity.
   const source = (await readFile(join(frontend, '.sanity/seed.ndjson'), 'utf8')).trim().split('\n').map(line=>JSON.parse(line));
   assertPlanStructure(source);
-  const { mockContent } = await import(pathToFileURL(join(frontend, 'src/lib/mock.ts')).href);
+  const mockContent = await loadFrontendMock(frontend);
   const slots = imageSlots(mockContent);
   phase = 'inventory';
   const existing = await client.fetch(`{
@@ -75,7 +75,7 @@ try {
     schemaHash:hash(schemaSource), validationErrors,
     documents:source.map(x=>({sourceKey:x._id,type:x._type,title:x.name || x.title || x._id, ...(x.price!==undefined?{price:x.price}:{} )})),
   };
-  const engineHash = hash((await readFile(new URL('./seed-import.mjs', import.meta.url), 'utf8')) + (await readFile(new URL('./seed-plan.mjs', import.meta.url), 'utf8')));
+  const engineHash = hash((await readFile(new URL('./seed-import.mjs', import.meta.url), 'utf8')) + (await readFile(new URL('./seed-plan.mjs', import.meta.url), 'utf8')) + (await readFile(new URL('./seed-source.mjs', import.meta.url), 'utf8')));
   plan.engineHash = engineHash;
   plan.digest = hash({ source, slots, images, schemaHash:plan.schemaHash, engineHash, inventory:existing.documents, authenticatedAudit });
   plan.ready = authenticatedAudit && existing.documents.length === 0 && validationErrors.length === 0;
